@@ -1,0 +1,90 @@
+@startuml
+
+title 割り勘ドメイン
+
+namespace domain {
+    namespace party {
+        class Party
+        class PartyId
+        class PartyName
+        class PartyHoldingDateTime
+        interface PartyRepository {
+            + PartyId nextIdentity()
+            + PartyId schedule(Party)
+        }
+    }
+
+    namespace member {
+        interface MemberRepository {
+            + MemberId nextIdentity()
+            + Member participate(Member)
+            + Member findById(MemberId)
+            + Members allMembers(PartyId)
+        }
+        class Members {
+            + List<Member> allMembers()
+            + PaymentWeight totalPaymentWeight()
+        }
+        note right: 幹事（1 人）と\n参加者（1 人以上）で構成される
+        class Member {
+            + Member asParticipant(\n  MemberId, PartyId, MemberName, PaymentType)
+            + Member asSecretary(\n  MemberId, PartyId, MemberName, PaymentType)
+        }
+        class MemberId
+        class MemberName
+        enum MemberType
+        enum PaymentType
+        class PaymentWeight {
+            + PaymentWeight plus(PaymentWeight)
+        }
+    }
+
+    namespace bill {
+        class Bill
+        class BillTo {
+            - MemberName
+            - BillingAmount
+        }
+        class BillIssueService {
+            + Bill issue()
+        }
+        class TotalBillingAmount {
+            + BillingAmount times(BillingProportion)
+            + BalanceDue minus(BillingAmount)
+        }
+        class BillingProportion
+        class BillingAmount {
+            + BillingAmount plus(BillingAmount)
+        }
+        note top: 請求金額は 500 円単位
+        class BalanceDue
+    }
+}
+
+domain.party.PartyRepository -u-> domain.party.Party
+domain.party.PartyRepository -r-> domain.party.PartyId
+domain.party.Party -u-> domain.party.PartyId
+domain.party.Party -d-> domain.party.PartyName
+domain.party.Party -d-> domain.party.PartyHoldingDateTime
+
+domain.member.Member -u-> domain.party.PartyId
+domain.member.Members -d->"2..*" domain.member.Member
+domain.member.MemberRepository -l-> domain.member.Member
+domain.member.MemberRepository -d-> domain.member.MemberId
+domain.member.MemberRepository -u-> domain.member.Members
+domain.member.Member -d-> domain.member.MemberId
+domain.member.Member -d-> domain.member.MemberName
+domain.member.Member -d-> domain.member.MemberType
+domain.member.Member -d-> domain.member.PaymentType
+domain.member.PaymentType -d-> domain.member.PaymentWeight
+
+domain.bill.BillIssueService --> domain.member.Members
+domain.bill.BillIssueService -d-> domain.bill.TotalBillingAmount
+domain.bill.BillIssueService -d-> domain.bill.Bill
+domain.bill.Bill -d->"2..*" domain.bill.BillTo
+domain.bill.Bill -d-> domain.bill.BalanceDue
+domain.bill.TotalBillingAmount -d-> domain.bill.BillingProportion
+domain.bill.TotalBillingAmount -d-> domain.bill.BillingAmount
+domain.bill.TotalBillingAmount -d-> domain.bill.BalanceDue
+
+@enduml
